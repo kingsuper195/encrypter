@@ -111,14 +111,21 @@ int main(int argc, char *argv[])
     }
     char *encrypted = (char *)malloc((intext_len + 1) * sizeof(char));
 
+    int keychar = 0;
     for(int i = 0; i<intext_len;i++) {
-
-        int tmp = tolower(arguments.input_text[i]) + tolower(key[i])-'a';
+        if(strchr(arguments.alphabet, tolower(arguments.input_text[i])) == NULL) {
+            encrypted[i] = arguments.input_text[i];
+            continue;
+        }
+        int upper = isupper(arguments.input_text[i]);
+        int tmp = tolower(arguments.input_text[i]) + tolower(key[keychar])-'a';
         while(tmp > 'z') {
             tmp -= 'z'-'a'+1;
         }
+        if(upper) tmp = toupper(tmp);
         // printf("%c + %c = %c \n", tolower(arguments.input_text[i]), tolower(key[i]),tmp);
         encrypted[i]= tmp;
+        keychar++;
     }
     encrypted[intext_len+1] = '\0';
 
