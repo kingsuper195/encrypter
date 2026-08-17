@@ -2,21 +2,11 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <ctype.h>
+
 
 int printHelp(void);
-// const char *argp_program_version = "encrypter 0.1";
-// static char doc[] =
-//     "Encrypter - A C-based command line program to encode strings with the vigenere cipher.";
-
-// static char args_doc[] = "KEY";
-
-// static struct argp_option options[] =
-//     {
-//         {"file", 'f', "FILE", 0, "Input File (not to be used with --text)"},
-//         {"output", 'o', "FILE", 0, "Output File"},
-//         {"text", 't', "TEXT", 0, "Input Text (not to be used with --file)"},
-//         {"verbose", 'v', 0, 0, "Produce verbose output"},
-//         {0}};
 
 struct arguments
 {
@@ -25,48 +15,8 @@ struct arguments
     char *output_file;
     char *input_file;
     char *input_text;
+    char *alphabet;
 };
-
-// static error_t parse_opt(int key, char *arg, struct argp_state *state)
-// {
-//     struct arguments *arguments = state->input;
-
-//     switch (key)
-//     {
-//     case 'v':
-//         arguments->verbose = 1;
-//         break;
-//     case 'o':
-//         arguments->output_file = arg;
-//         break;
-//     case 't':
-//         arguments->input_text = arg;
-//         break;
-//     case 'f':
-//         arguments->input_file = arg;
-//         break;
-//     case ARGP_KEY_ARG:
-//         if (state->arg_num >= 2)
-//             /* Too many arguments. */
-//             argp_usage(state);
-
-//         arguments->args[state->arg_num] = arg;
-
-//         break;
-
-//     case ARGP_KEY_END:
-//         if (state->arg_num < 2)
-//             /* Not enough arguments. */
-//             argp_usage(state);
-//         break;
-
-//     default:
-//         return ARGP_ERR_UNKNOWN;
-//     }
-//     return 0;
-// }
-
-// static struct argp argp = {options, parse_opt, args_doc, doc};
 
 int main(int argc, char *argv[])
 {
@@ -75,6 +25,7 @@ int main(int argc, char *argv[])
     arguments.output_file = "";
     arguments.input_file = "";
     arguments.input_text = "";
+    arguments.alphabet = "abcdefghijklmnopqrstuvwxyz";
 
     int opt;
     while ((opt = getopt(argc, argv, "i:o:t:h")) != -1)
@@ -137,11 +88,42 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("KEY = %s\nOUTPUT_FILE = %s\nINPUT_FILE = %s\nINPUT_TEXT = %s\n",
-           arguments.args[0],
-           arguments.output_file,
-           arguments.input_file,
-           arguments.input_text);
+    int intext_len = strlen(arguments.input_text);
+    int key_len = strlen(arguments.args[0]);
+    char *key;
+    if (intext_len > key_len)
+    {
+        int len = (int)ceil((double)intext_len / (double)key_len);
+        key = (char *)malloc((len * key_len + 1) * sizeof(char));
+        if (key == NULL)
+            return 1;
+        key[0] = '\0';
+        do
+        {
+            strcat(key, arguments.args[0]);
+            len--;
+        } while (len > 0);
+    }
+    else
+    {
+        key = (char *)malloc((key_len + 1) * sizeof(char));
+        strcpy(key, arguments.args[0]);
+    }
+    char *encrypted = (char *)malloc((intext_len + 1) * sizeof(char));
+
+    for(int i = 0; i<intext_len;i++) {
+
+        int tmp = tolower(arguments.input_text[i]) + tolower(key[i])-'a';
+        while(tmp > 'z') {
+            tmp -= 'z'-'a'+1;
+        }
+        // printf("%c + %c = %c \n", tolower(arguments.input_text[i]), tolower(key[i]),tmp);
+        encrypted[i]= tmp;
+    }
+    encrypted[intext_len+1] = '\0';
+
+    printf("%s + %s = %s", arguments.input_text, key, encrypted);
+    free(key);
     return 0;
 }
 
@@ -152,5 +134,7 @@ int printHelp(void)
     printf("-f FILE,            Input File (not to be used with -t)\n");
     printf("-o FILE,            Output File\n");
     printf("-t TEXT,            Input Text (not to be used with -f)\n");
+    printf("-a LETTERS,         Override alphabet (letters that are encoded)\n\n");
+    printf("Text from either -f or -t is encoded with KEY and sent to stdout or the -o option. Letters are all converted to lower case, and are skipped if not in alphbet. The default alphabet includes only a-z.\n");
     return 0;
 }

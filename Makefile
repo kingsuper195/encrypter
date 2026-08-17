@@ -1,2 +1,2 @@
 encrypter: encrypter.c
-	clang encrypter.c -o encrypter -std=c23
+	clang encrypter.c -o encrypter -std=c23 -lm
