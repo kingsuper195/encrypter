@@ -4,6 +4,7 @@
 #include <string.h>
 #include <math.h>
 #include <ctype.h>
+#include <errno.h>
 
 int printHelp(void);
 
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
     if (optind >= argc)
     {
         printf("A key is required. Run \"encrypter -h\" for more.\n");
-        return 1;
+        return EIO;
     }
 
     // Set the key
@@ -84,21 +85,21 @@ int main(int argc, char *argv[])
             printf("%s ", argv[optind++]);
         }
         printf("\nRun \"encrypter -h\" for more.\n");
-        return 1;
+        return EIO;
     }
 
     // If no input data was provided
     if (strlen(arguments.input_file) == 0 && strlen(arguments.input_text) == 0)
     {
         printf("Please set either an input file or an input text. Run \"encrypter -h\" for more.\n");
-        return 1;
+        return EIO;
     }
 
     // If both a string and a file were provided for input
     if (strlen(arguments.input_file) > 0 && strlen(arguments.input_text) > 0)
     {
         printf("Please set either one of an input file or an input text, not both. Run \"encrypter -h\" for more.\n");
-        return 1;
+        return EIO;
     }
 
     // Initalize the input text, based on either the file or the string
@@ -110,7 +111,7 @@ int main(int argc, char *argv[])
         if (inp == NULL)
         {
             printf("Memory Error!!\n");
-            return 1;
+            return errno;
         }
         strcpy(inp, arguments.input_text);
     }
@@ -122,7 +123,7 @@ int main(int argc, char *argv[])
         if (input_file == NULL)
         {
             printf("The input file could not be opened.\n");
-            return 2;
+            return errno;
         }
         // Find length of file
         fseek(input_file, 0L, SEEK_END);
@@ -135,7 +136,7 @@ int main(int argc, char *argv[])
         if (inp == NULL)
         {
             printf("Memory Error!!\n");
-            return 1;
+            return errno;
         }
         do
         {
@@ -155,6 +156,7 @@ int main(int argc, char *argv[])
     int inp_len = strlen(inp);
     int key_len = strlen(arguments.args[0]);
     char *key;
+
     // Repeat the key if it is too short for the text
     if (inp_len > key_len)
     {
@@ -162,8 +164,10 @@ int main(int argc, char *argv[])
         key = (char *)malloc((len * key_len + 1) * sizeof(char));
         if (key == NULL)
         {
+            int malerrno = errno;
             printf("Memory Error!!\n");
-            return 1;
+            free(inp);
+            return malerrno;
         }
         key[0] = '\0';
         do
@@ -177,8 +181,10 @@ int main(int argc, char *argv[])
         key = (char *)malloc((key_len + 1) * sizeof(char));
         if (key == NULL)
         {
+            int malerrno = errno;
             printf("Memory Error!!\n");
-            return 1;
+            free(inp);
+            return malerrno;
         }
         strcpy(key, arguments.args[0]);
     }
@@ -187,8 +193,11 @@ int main(int argc, char *argv[])
     char *encrypted = (char *)malloc((inp_len + 1) * sizeof(char));
     if (encrypted == NULL)
     {
+        int malerrno = errno;
         printf("Memory Error!!\n");
-        return 1;
+        free(inp);
+        free(key);
+        return malerrno;
     }
     int keychar = 0;
 
@@ -235,7 +244,7 @@ int main(int argc, char *argv[])
         if (output_file == NULL)
         {
             printf("The output file could not be opened.\n");
-            return 2;
+            return errno;
         }
         for (int i = 0; encrypted[i] != '\0'; i++)
         {
