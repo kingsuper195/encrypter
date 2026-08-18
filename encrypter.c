@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 
     // Use getopt to find out which args are used
     int opt;
-    while ((opt = getopt(argc, argv, "f:o:t:h")) != -1)
+    while ((opt = getopt(argc, argv, "f:o:t:a:h")) != -1)
     {
         switch (opt)
         {
@@ -53,6 +53,12 @@ int main(int argc, char *argv[])
         case 't':
             arguments.input_text = optarg;
             break;
+
+        // Custom alphabet
+        case 'a':
+            arguments.alphabet = optarg;
+            break;
+
         case '?':
             break;
         default:
@@ -194,13 +200,24 @@ int main(int argc, char *argv[])
             encrypted[i] = inp[i];
             continue;
         }
-        // To-Do: Base algorithm on strchr of alphabet variable instead of ASCII
+        // Record whether or not char is uppercase
         int upper = isupper(inp[i]);
-        int tmp = tolower(inp[i]) + tolower(key[keychar]) - 'a';
-        while (tmp > 'z')
+
+        // Get the indexes of the inp and key chars in alphabet
+        long int inp_id = (long int)(strchr(arguments.alphabet, tolower(inp[i])) - arguments.alphabet);
+        long int key_id = (long int)(strchr(arguments.alphabet, tolower(key[keychar])) - arguments.alphabet);
+
+        // Add them togther
+        long int inttmp = inp_id + key_id;
+
+        // Account for overflow
+        while (inttmp >= strlen(arguments.alphabet))
         {
-            tmp -= 'z' - 'a' + 1;
+            inttmp -= strlen(arguments.alphabet);
         }
+
+        // Append to str
+        char tmp = arguments.alphabet[inttmp];
         if (upper)
             tmp = toupper(tmp);
         encrypted[i] = tmp;
@@ -220,14 +237,15 @@ int main(int argc, char *argv[])
             printf("The output file could not be opened.\n");
             return 2;
         }
-        for (int i = 0; encrypted[i] != '\0'; i++) {
-            fputc(encrypted[i],output_file);
+        for (int i = 0; encrypted[i] != '\0'; i++)
+        {
+            fputc(encrypted[i], output_file);
         }
         fclose(output_file);
     }
     else
     {
-        printf("%s", encrypted);
+        printf("%s\n", encrypted);
     }
 
     // Free alloc'd stuffs.
