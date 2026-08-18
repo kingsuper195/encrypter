@@ -5,7 +5,6 @@
 #include <math.h>
 #include <ctype.h>
 
-
 int printHelp(void);
 
 struct arguments
@@ -28,7 +27,7 @@ int main(int argc, char *argv[])
     arguments.alphabet = "abcdefghijklmnopqrstuvwxyz";
 
     int opt;
-    while ((opt = getopt(argc, argv, "i:o:t:h")) != -1)
+    while ((opt = getopt(argc, argv, "f:o:t:h")) != -1)
     {
         switch (opt)
         {
@@ -39,7 +38,7 @@ int main(int argc, char *argv[])
             return 0;
 
         // Input file
-        case 'i':
+        case 'f':
             arguments.input_file = optarg;
             break;
 
@@ -87,16 +86,62 @@ int main(int argc, char *argv[])
         printf("Please set either one of an input file or an input text, not both. Run \"encrypter --help\" for more.");
         return 1;
     }
+    char *inp;
+    if (strlen(arguments.input_text) > 0)
+    {
+        inp = (char *)malloc((strlen(arguments.input_text) + 1) * sizeof(char));
+        if (inp == NULL)
+        {
+            printf("Memory Error!!\n");
+            return 1;
+        }
+        strcpy(inp, arguments.input_text);
+    }
+    else
+    {
+        FILE *input_file;
+        input_file = fopen(arguments.input_file, "r");
+        if (input_file == NULL)
+        {
+            printf("The input file could not be opened.\n");
+            return 2;
+        }
+        fseek(input_file, 0L, SEEK_END);
+        int sz = ftell(input_file);
+        rewind(input_file);
+        inp = (char *)malloc((sz + 1) * sizeof(char));
+        inp[0] = '\0';
+        if (inp == NULL)
+        {
+            printf("Memory Error!!\n");
+            return 1;
+        }
+        do
+        {
+            // Taking input single character at a time
+            char c = fgetc(input_file);
 
-    int intext_len = strlen(arguments.input_text);
+            // Checking for end of file
+            if (feof(input_file))
+                break;
+
+            sprintf(inp + strlen(inp), "%c", c);
+        } while (1);
+        fclose(input_file);
+        // return 0;
+    }
+    int inp_len = strlen(inp);
     int key_len = strlen(arguments.args[0]);
     char *key;
-    if (intext_len > key_len)
+    if (inp_len > key_len)
     {
-        int len = (int)ceil((double)intext_len / (double)key_len);
+        int len = (int)ceil((double)inp_len / (double)key_len);
         key = (char *)malloc((len * key_len + 1) * sizeof(char));
         if (key == NULL)
+        {
+            printf("Memory Error!!\n");
             return 1;
+        }
         key[0] = '\0';
         do
         {
@@ -107,30 +152,61 @@ int main(int argc, char *argv[])
     else
     {
         key = (char *)malloc((key_len + 1) * sizeof(char));
+        if (key == NULL)
+        {
+            printf("Memory Error!!\n");
+            return 1;
+        }
         strcpy(key, arguments.args[0]);
     }
-    char *encrypted = (char *)malloc((intext_len + 1) * sizeof(char));
-
+    char *encrypted = (char *)malloc((inp_len + 1) * sizeof(char));
+    if (encrypted == NULL)
+    {
+        printf("Memory Error!!\n");
+        return 1;
+    }
     int keychar = 0;
-    for(int i = 0; i<intext_len;i++) {
-        if(strchr(arguments.alphabet, tolower(arguments.input_text[i])) == NULL) {
-            encrypted[i] = arguments.input_text[i];
+    for (int i = 0; i < inp_len; i++)
+    {
+        if (strchr(arguments.alphabet, tolower(inp[i])) == NULL)
+        {
+            encrypted[i] = inp[i];
             continue;
         }
-        int upper = isupper(arguments.input_text[i]);
-        int tmp = tolower(arguments.input_text[i]) + tolower(key[keychar])-'a';
-        while(tmp > 'z') {
-            tmp -= 'z'-'a'+1;
+        int upper = isupper(inp[i]);
+        int tmp = tolower(inp[i]) + tolower(key[keychar]) - 'a';
+        while (tmp > 'z')
+        {
+            tmp -= 'z' - 'a' + 1;
         }
-        if(upper) tmp = toupper(tmp);
-        // printf("%c + %c = %c \n", tolower(arguments.input_text[i]), tolower(key[i]),tmp);
-        encrypted[i]= tmp;
+        if (upper)
+            tmp = toupper(tmp);
+        // printf("%c + %c = %c \n", tolower(inp[i]), tolower(key[i]),tmp);
+        encrypted[i] = tmp;
         keychar++;
     }
-    encrypted[intext_len+1] = '\0';
-
-    printf("%s + %s = %s", arguments.input_text, key, encrypted);
+    encrypted[inp_len] = '\0';
+    if (strlen(arguments.output_file) > 0)
+    {
+        FILE *output_file;
+        output_file = fopen(arguments.output_file, "w");
+        if (output_file == NULL)
+        {
+            printf("The output file could not be opened.\n");
+            return 2;
+        }
+        for (int i = 0; encrypted[i] != '\0'; i++) {
+            fputc(encrypted[i],output_file);
+        }
+        fclose(output_file);
+    }
+    else
+    {
+        printf("%s", encrypted);
+    }
+    free(inp);
     free(key);
+    free(encrypted);
     return 0;
 }
 
