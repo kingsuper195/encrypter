@@ -19,6 +19,7 @@ struct arguments
 
 int main(int argc, char *argv[])
 {
+    // Default Arguments
     struct arguments arguments;
     arguments.verbose = 0;
     arguments.output_file = "";
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
     arguments.input_text = "";
     arguments.alphabet = "abcdefghijklmnopqrstuvwxyz";
 
+    // Use getopt to find out which args are used
     int opt;
     while ((opt = getopt(argc, argv, "f:o:t:h")) != -1)
     {
@@ -57,13 +59,17 @@ int main(int argc, char *argv[])
             printf("?? getopt returned character code 0%o ??\n", opt);
         }
     }
+    // If the getopt function searched every index
     if (optind >= argc)
     {
-        printf("A key is required. Run \"encrypter --help\" for more.");
+        printf("A key is required. Run \"encrypter -h\" for more.\n");
         return 1;
     }
+
+    // Set the key
     arguments.args[0] = argv[optind++];
 
+    // If there are extra perams
     if (optind < argc)
     {
         printf("Unknown extra input: ");
@@ -71,24 +77,29 @@ int main(int argc, char *argv[])
         {
             printf("%s ", argv[optind++]);
         }
-        printf("\nRun \"encrypter --help\" for more.");
+        printf("\nRun \"encrypter -h\" for more.\n");
         return 1;
     }
 
+    // If no input data was provided
     if (strlen(arguments.input_file) == 0 && strlen(arguments.input_text) == 0)
     {
-        printf("Please set either an input file or an input text. Run \"encrypter --help\" for more.");
+        printf("Please set either an input file or an input text. Run \"encrypter -h\" for more.\n");
         return 1;
     }
 
+    // If both a string and a file were provided for input
     if (strlen(arguments.input_file) > 0 && strlen(arguments.input_text) > 0)
     {
-        printf("Please set either one of an input file or an input text, not both. Run \"encrypter --help\" for more.");
+        printf("Please set either one of an input file or an input text, not both. Run \"encrypter -h\" for more.\n");
         return 1;
     }
+
+    // Initalize the input text, based on either the file or the string
     char *inp;
     if (strlen(arguments.input_text) > 0)
     {
+        // A string was provided
         inp = (char *)malloc((strlen(arguments.input_text) + 1) * sizeof(char));
         if (inp == NULL)
         {
@@ -99,6 +110,7 @@ int main(int argc, char *argv[])
     }
     else
     {
+        // A file was provided
         FILE *input_file;
         input_file = fopen(arguments.input_file, "r");
         if (input_file == NULL)
@@ -106,9 +118,12 @@ int main(int argc, char *argv[])
             printf("The input file could not be opened.\n");
             return 2;
         }
+        // Find length of file
         fseek(input_file, 0L, SEEK_END);
         int sz = ftell(input_file);
         rewind(input_file);
+
+        // Set inp to the file's data
         inp = (char *)malloc((sz + 1) * sizeof(char));
         inp[0] = '\0';
         if (inp == NULL)
@@ -128,11 +143,13 @@ int main(int argc, char *argv[])
             sprintf(inp + strlen(inp), "%c", c);
         } while (1);
         fclose(input_file);
-        // return 0;
     }
+
+    // Get the length of inp and key
     int inp_len = strlen(inp);
     int key_len = strlen(arguments.args[0]);
     char *key;
+    // Repeat the key if it is too short for the text
     if (inp_len > key_len)
     {
         int len = (int)ceil((double)inp_len / (double)key_len);
@@ -159,6 +176,8 @@ int main(int argc, char *argv[])
         }
         strcpy(key, arguments.args[0]);
     }
+
+    // Initialize the encrypted variable
     char *encrypted = (char *)malloc((inp_len + 1) * sizeof(char));
     if (encrypted == NULL)
     {
@@ -166,13 +185,16 @@ int main(int argc, char *argv[])
         return 1;
     }
     int keychar = 0;
+
     for (int i = 0; i < inp_len; i++)
     {
+        // If the character is not in the alphabet, copy it directly to the str, then continue on.
         if (strchr(arguments.alphabet, tolower(inp[i])) == NULL)
         {
             encrypted[i] = inp[i];
             continue;
         }
+        // To-Do: Base algorithm on strchr of alphabet variable instead of ASCII
         int upper = isupper(inp[i]);
         int tmp = tolower(inp[i]) + tolower(key[keychar]) - 'a';
         while (tmp > 'z')
@@ -181,11 +203,14 @@ int main(int argc, char *argv[])
         }
         if (upper)
             tmp = toupper(tmp);
-        // printf("%c + %c = %c \n", tolower(inp[i]), tolower(key[i]),tmp);
         encrypted[i] = tmp;
         keychar++;
     }
+
+    // Add a NUL str terminator
     encrypted[inp_len] = '\0';
+
+    // If there is an output file given, write to it, else write to stdout
     if (strlen(arguments.output_file) > 0)
     {
         FILE *output_file;
@@ -204,6 +229,8 @@ int main(int argc, char *argv[])
     {
         printf("%s", encrypted);
     }
+
+    // Free alloc'd stuffs.
     free(inp);
     free(key);
     free(encrypted);
